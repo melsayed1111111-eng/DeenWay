@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق الهدى | الموسوعة الإسلامية</title>
+    <!-- Favicon -->
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2913/2913520.png">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;500;700&display=swap" rel="stylesheet">
+    <!-- 1. استدعاء مكتبات فيرباز الأساسية -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics-compat.js"></script>
+
+    <style>
+        :root {
+            --glass: rgba(0, 0, 0, 0.6);
+            --gold: #ffcc00;
+            --cyan: #00f2ff;
+            --text: #ffffff;
+            --bg-url: url('https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=2070&auto=format&fit=crop');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        /* وضع الإضاءة (Light Mode) */
+        body.light-theme {
+            --glass: rgba(255, 255, 255, 0.8);
+            --text: #1a1a1a;
+            --gold: #b8860b;
+            --cyan: #008b8b;
+            --bg-url: url('https://images.unsplash.com/photo-1590076215667-873d312dc86c?q=80&w=2070&auto=format&fit=crop');
+        }
+
+        body {
+            /* خلفية إسلامية احترافية متوافقة مع الموبايل */
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+                url('https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: var(--text);
+            transition: 0.5s;
+            font-family: 'Tajawal', sans-serif;
+            direction: rtl;
+            min-height: 100vh;
+            padding-bottom: 90px;
+            overflow-x: hidden;
+            user-select: none;
+            /* حماية الكود */
+        }
+
+        /* زر تبديل الثيم */
+        .theme-toggle {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            z-index: 1001;
+            background: var(--glass);
+            border: 1px solid var(--gold);
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .container {
+            padding: 15px;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        /* تصميم بطاقة التقويم المزدوجة */
+        .calendar-card {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 25px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .imam-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--gold);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            text-align: right;
+        }
+
+        .hijri-section {
+            font-size: 1.8rem;
+            color: var(--gold);
+            font-weight: 700;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(255, 204, 0, 0.3);
+        }
+
+        .gregorian-section {
+            font-size: 1.1rem;
+            color: var(--cyan);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        /* أزرار الأذكار والروابط */
+        .btn-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            text-decoration: none;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-link:hover {
+            background: var(--gold);
+            color: black;
+            transform: scale(1.02);
+        }
+
+        .btn-link i {
+            margin-left: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* التبويبات */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* المنيو السفلي */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            border-top: 2px solid var(--gold);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            text-align: center;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.7rem;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: var(--gold);
+        }
+
+        .nav-item div {
+            font-size: 1.4rem;
+            margin-bottom: 2px;
+        }
+
+        h2 {
+            color: var(--gold);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* مواقيت الصلاة */
+        .prayer-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .prayer-row span:last-child {
+            color: var(--gold);
+            font-weight: bold;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 8px;
+            border-right: 3px solid var(--gold);
+            margin-bottom: 5px;
+        }
+
+        .battle-box p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin: 5px 0;
+            color: #eee;
+        }
+
+        .battle-box h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        /* تعديل عرض المنيو ليناسب 5 أزرار */
+        .bottom-nav {
+            grid-template-columns: repeat(5, 1fr);
+            display: grid !important;
+        }
+
+        /* تنسيق السبحة */
+        .tasbih-box {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--glass);
+            padding: 10px 15px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--gold);
+            z-index: 1001;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* تنسيق البحث */
+        .search-container {
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        /* الوضع الليلي التلقائي */
+        .night-mode {
+            filter: brightness(0.7) contrast(1.1);
+            background: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9)) !important;
+        }
+
+        /* تنسيق اللغات */
+        .lang-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+
+        .lang-btn {
+            background: var(--glass);
+            border: 1px solid white;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        /* كروت الصحابة */
+        .companion-link {
+            display: block;
+            background: rgba(255, 255, 255, 0.05);
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 10px;
+            color: var(--cyan);
+            text-decoration: none;
+            font-size: 0.9rem;
+            border-right: 3px solid var(--cyan);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 500px;
+            padding: 25px;
+            position: relative;
+        }
+    </style>
+
+</head>
+
+<body oncontextmenu="return false;">
+
+    <div class="container">
+
+        <!-- القسم الأول: الرئيسية (التقويم المزدوج + الصلاة) -->
+        <section id="home" class="section active">
+            <!-- بطاقة التقويم المزدوجة -->
+            <div class="calendar-card">
+                <div class="hijri-section" id="hijri-date">جاري الحساب...</div>
+                <div class="gregorian-section" id="gregorian-date">...</div>
+                <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.7;">(تقويم مصر الكنانة)</div>
+            </div>
+
+            <!-- أزرار التحكم العلوية -->
+            <div class="lang-switcher">
+                <button class="lang-btn" onclick="setLanguage('ar')">AR</button>
+                <button class="lang-btn" onclick="setLanguage('en')">EN</button>
+                <button class="lang-btn" onclick="setLanguage('fr')">FR</button>
+            </div>
+
+            <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+
+            <div class="tasbih-box" onclick="vibrateTasbih()">
+                <div id="tasbih-count" style="font-size: 1.2rem; font-weight: bold; color: var(--gold);">0</div>
+                <div style="font-size: 0.6rem;">سُبحان الله</div>
+            </div>
+
+            <div class="glass-card">
+                <h2>مواقيت الصلاة</h2>
+                <div id="prayer-times">
+                    <div class="prayer-row"><span>الفجر</span><span id="fajr">--:--</span></div>
+                    <div class="prayer-row"><span>الظهر</span><span id="dhuhr">--:--</span></div>
+                    <div class="prayer-row"><span>العصر</span><span id="asr">--:--</span></div>
+                    <div class="prayer-row"><span>المغرب</span><span id="maghrib">--:--</span></div>
+                    <div class="prayer-row"><span>العشاء</span><span id="isha">--:--</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- القسم الثاني: القرآن الكريم -->
+        <section id="quran" class="section">
+            <div class="glass-card">
+                <h2>القرآن الكريم</h2>
+                <a href="https://quran.com/ar" target="_blank" class="btn-link">📖 تصفح المصحف (قراءة)</a>
+                <a href="https://mp3quran.net/ar" target="_blank" class="btn-link">🎧 استماع مباشر (MP3)</a>
+                <a href="https://quran.ksu.edu.sa/index.php?l=ar" target="_blank" class="btn-link">🔍 تفسير الآيات</a>
+            </div>
+        </section>
+
+        <!-- القسم الثالث: الأذكار (تم إصلاح الروابط) -->
+        <section id="azkar" class="section">
+            <div class="glass-card">
+                <h2>حصن المسلم</h2>
+                <a href="https://kalemtayeb.com/azkar/section/1" target="_blank" class="btn-link">☀️ أذكار الصباح</a>
+                <a href="https://kalemtayeb.com/azkar/section/2" target="_blank" class="btn-link">🌙 أذكار المساء</a>
+                <a href="https://kalemtayeb.com/azkar/section/6" target="_blank" class="btn-link">🛏️ أذكار النوم</a>
+                <a href="https://kalemtayeb.com/azkar/section/4" target="_blank" class="btn-link">🕌 أذكار الصلاة</a>
+                <a href="https://islamweb.net/ar/article/142345/" target="_blank" class="btn-link">🛡️ الرقية
+                    الشرعية</a>
+            </div>
+        </section>
+
+        <section id="library" class="section">
+            <div class="glass-card">
+                <h2 style="color: var(--gold);">📖 السيرة النبوية الشريفة</h2>
+                <p style="font-size: 0.9rem; margin-bottom: 10px;">المصدر الأوثق عالمياً: كتاب الرحيق المختوم</p>
+                <a href="https://islamway.net/book/442/%D8%A7%D9%84%D8%B1%D8%AD%D9%8A%D9%82-%D0%A7%D9%84%D9%85%D8%AE%D8%AA%D9%88%D9%85"
+                    target="_blank" class="btn-link">📜 قراءة الرحيق المختوم (أونلاين)</a>
+                <a href="https://www.islamweb.net/ar/article/11018/%D8%BA%D8%B2%D9%88%D8%A7%D8%AA-%D8%A7%D9%84%D8%B1%D8%B3%D9%88%D9%84-%D8%B5%D9%84%D9%89-%D8%A7%D9%84%D9%84%D9%87-%D8%B9%D9%84%D9%8A%D9%87-%D9%88%D8%B3%D9%84%D9%85"
+                    target="_blank" class="btn-link">⚔️ تفاصيل الغزوات (إسلام ويب)</a>
+            </div>
+            <h2 data-i18n="lib_title">📚 موسوعة الأئمة الأربعة</h2>
+            <p style="font-size: 0.8rem; margin-bottom: 15px; color: var(--gold);">المصادر: إسلام ويب - المكتبة
+                الشاملة</p>
+
+            <!-- الإمام أبو حنيفة -->
+            <div class="imam-card">
+                <h3 style="color: var(--gold);">الإمام أبو حنيفة النعمان</h3>
+                <a href="https://www.islamweb.net/ar/library/index.php?page=bookcontents&ID=1095&idfrom=0&idto=0&flag=1&bk_no=60&ayano=0&surano=0&bookSearchKeyWord=0"
+                    target="_blank" class="btn-link">📖 سيرة الإمام (إسلام ويب)</a>
+                <a href="https://shamela.ws/book/7054" target="_blank" class="btn-link">📚 مؤلفاته (المكتبة
+                    الشاملة)</a>
+            </div>
+
+            <!-- الإمام مالك -->
+            <div class="imam-card">
+                <h3 style="color: var(--gold);">الإمام مالك بن أنس</h3>
+                <a href="https://www.islamweb.net/ar/library/index.php?page=bookcontents&ID=1295&idfrom=0&idto=0&flag=1&bk_no=60&ayano=0&surano=0&bookSearchKeyWord=0"
+                    target="_blank" class="btn-link">📖 سيرة الإمام (إسلام ويب)</a>
+                <a href="https://shamela.ws/book/21722" target="_blank" class="btn-link">📚 تصفح كتاب الموطأ</a>
+            </div>
+
+            <!-- الإمام الشافعي -->
+            <div class="imam-card">
+                <h3 style="color: var(--gold);">الإمام الشافعي</h3>
+                <a href="https://www.islamweb.net/ar/library/index.php?page=bookcontents&ID=1602&idfrom=0&idto=0&flag=1&bk_no=60&ayano=0&surano=0&bookSearchKeyWord=0"
+                    target="_blank" class="btn-link">📖 سيرة الإمام (إسلام ويب)</a>
+                <a href="https://shamela.ws/book/561" target="_blank" class="btn-link">📚 تصفح كتاب الأم</a>
+            </div>
+
+            <!-- الإمام أحمد بن حنبل -->
+            <div class="imam-card">
+                <h3 style="color: var(--gold);">الإمام أحمد بن حنبل</h3>
+                <a href="https://www.islamweb.net/ar/library/index.php?page=bookcontents&ID=2010&idfrom=0&idto=0&flag=1&bk_no=60&ayano=0&surano=0&bookSearchKeyWord=0"
+                    target="_blank" class="btn-link">📖 سيرة الإمام (إسلام ويب)</a>
+                <a href="https://shamela.ws/book/25794" target="_blank" class="btn-link">📚 تصفح مسند أحمد</a>
+            </div>
+    </div>
+    </section>
+
+    <!-- نافذة عرض بيانات الكتاب (Modal) -->
+    <div id="bookModal" class="modal-overlay" style="display:none;">
+        <div class="glass-card modal-content">
+            <h2 id="modalTitle" style="color: var(--gold);"></h2>
+            <div id="modalBody"
+                style="text-align: right; font-size: 0.9rem; line-height: 1.6; margin: 15px 0; max-height: 300px; overflow-y: auto;">
+            </div>
+            <button onclick="closeModal()" class="btn-link"
+                style="background: var(--gold); color: black;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- القسم الخامس: التاريخ والغزوات (الإضافة الجديدة) -->
+    <section id="history-new" class="section">
+        <div class="glass-card">
+            <h2 id="txt-history-title">⚔️ التاريخ والفتوحات</h2>
+
+            <!-- خانة البحث الذكي -->
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="ابحث عن صحابي أو غزوة..."
+                    onkeyup="smartSearch()">
+            </div>
+
+            <div id="search-results">
+                <!-- فئة: الخلفاء الراشدون -->
+                <h3 style="color: var(--gold); font-size: 1.1rem; margin-top: 15px;">🚩 الخلفاء الراشدون</h3>
+                <div class="searchable-item">
+                    <a href="https://ar.wikipedia.org/wiki/أبو_بكر_الصديق" target="_blank" class="companion-link">أبو
+                        بكر الصديق</a>
+                    <a href="https://ar.wikipedia.org/wiki/عمر_بن_الخطاب" target="_blank" class="companion-link">عمر
+                        بن الخطاب</a>
+                    <a href="https://ar.wikipedia.org/wiki/عثمان_بن_عفان" target="_blank" class="companion-link">عثمان
+                        بن عفان</a>
+                    <a href="https://ar.wikipedia.org/wiki/علي_بن_أبي_طالب" target="_blank" class="companion-link">علي
+                        بن أبي طالب</a>
+                </div>
+
+                <!-- فئة: بقية العشرة المبشرون بالجنة -->
+                <h3 style="color: var(--gold); font-size: 1.1rem; margin-top: 15px;">🌟 بقية العشرة المبشرون</h3>
+                <div class="searchable-item">
+                    <a href="https://ar.wikipedia.org/wiki/الزبير_بن_العوام" target="_blank"
+                        class="companion-link">الزبير بن العوام</a>
+                    <a href="https://ar.wikipedia.org/wiki/طلحة_بن_عبيد_الله" target="_blank"
+                        class="companion-link">طلحة بن عبيد الله</a>
+                    <a href="https://ar.wikipedia.org/wiki/عبد_الرحمن_بن_عوف" target="_blank" class="companion-link">عبد
+                        الرحمن بن عوف</a>
+                    <a href="https://ar.wikipedia.org/wiki/سعد_بن_أبي_وقاص" target="_blank" class="companion-link">سعد
+                        بن أبي وقاص</a>
+                    <a href="https://ar.wikipedia.org/wiki/سعيد_بن_زيد" target="_blank" class="companion-link">سعيد
+                        بن زيد</a>
+                    <a href="https://ar.wikipedia.org/wiki/أبو_عبيدة_بن_الجراح" target="_blank"
+                        class="companion-link">أبو عبيدة بن الجراح</a>
+                </div>
+
+                <!-- فئة: قادة وعلماء الصحابة -->
+                <h3 style="color: var(--gold); font-size: 1.1rem; margin-top: 15px;">⚔️ قادة وعلماء وفضلاء</h3>
+                <div class="searchable-item">
+                    <a href="https://ar.wikipedia.org/wiki/خالد_بن_الوليد" target="_blank" class="companion-link">خالد
+                        بن الوليد (سيف الله)</a>
+                    <a href="https://ar.wikipedia.org/wiki/حمزة_بن_عبد_المطلب" target="_blank"
+                        class="companion-link">حمزة بن عبد المطلب (أسد الله)</a>
+                    <a href="https://ar.wikipedia.org/wiki/جعفر_بن_أبي_طالب" target="_blank" class="companion-link">جعفر
+                        بن أبي طالب (الطيار)</a>
+                    <a href="https://ar.wikipedia.org/wiki/بلال_بن_رباح" target="_blank" class="companion-link">بلال
+                        بن رباح (مؤذن الرسول)</a>
+                    <a href="https://ar.wikipedia.org/wiki/أبو_هريرة" target="_blank" class="companion-link">أبو
+                        هريرة (راوية الإسلام)</a>
+                    <a href="https://ar.wikipedia.org/wiki/عبد_الله_بن_عباس" target="_blank" class="companion-link">عبد
+                        الله بن عباس (حبر الأمة)</a>
+                    <a href="https://ar.wikipedia.org/wiki/عبد_الله_بن_عمر_بن_الخطاب" target="_blank"
+                        class="companion-link">عبد الله بن عمر</a>
+                    <a href="https://ar.wikipedia.org/wiki/عبد_الله_بن_مسعود" target="_blank" class="companion-link">عبد
+                        الله بن مسعود</a>
+                    <a href="https://ar.wikipedia.org/wiki/معاذ_بن_جبل" target="_blank" class="companion-link">معاذ
+                        بن جبل</a>
+                    <a href="https://ar.wikipedia.org/wiki/أبو_ذر_الغفاري" target="_blank" class="companion-link">أبو ذر
+                        الغفاري</a>
+                    <a href="https://ar.wikipedia.org/wiki/سلمان_الفارسي" target="_blank" class="companion-link">سلمان
+                        الفارسي</a>
+                    <a href="https://ar.wikipedia.org/wiki/عمرو_بن_العاص" target="_blank" class="companion-link">عمرو بن
+                        العاص</a>
+                    <a href="https://ar.wikipedia.org/wiki/مصعب_بن_عمير" target="_blank" class="companion-link">مصعب
+                        بن عمير</a>
+                    <a href="https://ar.wikipedia.org/wiki/أنس_بن_مالك" target="_blank" class="companion-link">أنس
+                        بن مالك</a>
+                    <a href="https://ar.wikipedia.org/wiki/أبو_أيوب_الأنصاري" target="_blank" class="companion-link">أبو
+                        أيوب الأنصاري</a>
+                    <a href="https://ar.wikipedia.org/wiki/خالد_بن_سعيد_بن_العاص" target="_blank"
+                        class="companion-link">خالد بن سعيد</a>
+                    <a href="https://ar.wikipedia.org/wiki/زيد_بن_حارثة" target="_blank" class="companion-link">زيد
+                        بن حارثة</a>
+                    <a href="https://ar.wikipedia.org/wiki/أسامة_بن_زيد" target="_blank" class="companion-link">أسامة بن
+                        زيد</a>
+                    <a href="https://ar.wikipedia.org/wiki/البراء_بن_مالك" target="_blank" class="companion-link">البراء
+                        بن مالك</a>
+                    <a href="https://ar.wikipedia.org/wiki/سعد_بن_معاذ" target="_blank" class="companion-link">سعد
+                        بن معاذ</a>
+                    <a href="https://ar.wikipedia.org/wiki/عبادة_بن_الصامت" target="_blank" class="companion-link">عبادة
+                        بن الصامت</a>
+                </div>
+
+                <!-- فئة: أمهات المؤمنين والصحابيات -->
+                <h3 style="color: var(--gold); font-size: 1.1rem; margin-top: 15px;">🌸 أمهات المؤمنين وصحابيات</h3>
+                <div class="searchable-item">
+                    <a href="https://ar.wikipedia.org/wiki/خديجة_بنت_خويلد" target="_blank" class="companion-link">خديجة
+                        بنت خويلد</a>
+                    <a href="https://ar.wikipedia.org/wiki/عائشة_بنت_أبي_بكر" target="_blank"
+                        class="companion-link">عائشة بنت أبي بكر</a>
+                    <a href="https://ar.wikipedia.org/wiki/فاطمة_الزهراء" target="_blank" class="companion-link">فاطمة
+                        الزهراء</a>
+                    <a href="https://ar.wikipedia.org/wiki/حفصة_بنت_عمر" target="_blank" class="companion-link">حفصة
+                        بنت عمر</a>
+                    <a href="https://ar.wikipedia.org/wiki/زينب_بنت_جحش" target="_blank" class="companion-link">زينب
+                        بنت جحش</a>
+                    <a href="https://ar.wikipedia.org/wiki/أم_سلمة" target="_blank" class="companion-link">أم
+                        سلمة</a>
+                    <a href="https://ar.wikipedia.org/wiki/أم_عمارة" target="_blank" class="companion-link">أم عمارة
+                        (نسيبة بنت كعب)</a>
+                    <a href="https://ar.wikipedia.org/wiki/أسماء_بنت_أبي_بكر" target="_blank"
+                        class="companion-link">أسماء بنت أبي بكر (ذات النطاقين)</a>
+                    <a href="https://ar.wikipedia.org/wiki/سمية_بنت_خياط" target="_blank" class="companion-link">سمية
+                        بنت خياط (أول شهيدة)</a>
+                    <a href="https://ar.wikipedia.org/wiki/خولة_بنت_الأزور" target="_blank" class="companion-link">خولة
+                        بنت الأزور</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    </div>
+
+    <!-- شريط التنقل السفلي -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="showTab('home', this)">
+            <div>🏠</div>الرئيسية
+        </div>
+        <div class="nav-item" onclick="showTab('quran', this)">
+            <div>📖</div>القرآن
+        </div>
+        <div class="nav-item" onclick="showTab('azkar', this)">
+            <div>📿</div>الأذكار
+        </div>
+        <div class="nav-item" onclick="showTab('history-new', this)">
+            <div>⚔️</div>التاريخ
+        </div>
+        <div class="nav-item" onclick="showTab('library', this)">
+            <div>📜</div>المكتبة
+        </div>
+    </nav>
+
+    <!-- مكان كود فيرباز (Firebase) -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script> -->
+
+    <script>
+        // 2. إعدادات فيرباز الخاصة بمشروعك (التي أرسلتها أنت)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDKbtDRO104bk-ujmeuJ6a_qdnyES--51U",
+            authDomain: "deenway-a108d.firebaseapp.com",
+            projectId: "deenway-a108d",
+            storageBucket: "deenway-a108d.firebasestorage.app",
+            messagingSenderId: "170653007063",
+            appId: "1:170653007063:web:6a59032bfdf5554a500492",
+            measurementId: "G-M9C03YXT1P"
+        };
+
+        // 3. تهيئة فيرباز في التطبيق
+        firebase.initializeApp(firebaseConfig);
+        const analytics = firebase.analytics();
+        const messaging = firebase.messaging();
+
+        // 4. طلب إذن الإشعارات عند فتح التطبيق (لإرسال تنبيهات الأيام القمرية)
+        function requestPermission() {
+            console.log('جاري طلب إذن التنبيهات...');
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    console.log('تم منح إذن التنبيهات.');
+                    // هنا يمكنك الحصول على الـ Token الخاص بالمستخدم لإرسال رسائل له
+                    messaging.getToken({ vapidKey: 'ضع_هنا_مفتاح_VAPID_من_إعدادات_فيرباز' })
+                        .then((currentToken) => {
+                            if (currentToken) {
+                                console.log("Token الخاص بالمستخدم: ", currentToken);
+                                // يمكنك حفظ هذا التوكن في قاعدة بيانات لإرسال الإشعارات لاحقاً
+                            }
+                        })
+                        .catch((err) => {
+                            console.log('حدث خطأ أثناء الحصول على التوكن', err);
+                        });
+                } else {
+                    console.log('تم رفض الإذن.');
+                }
+            });
+        }
+
+        // استدعاء طلب الإذن عند التحميل
+        requestPermission();
+
+        // 5. التعامل مع الرسائل الواردة أثناء فتح التطبيق
+        messaging.onMessage((payload) => {
+            console.log('وصلت رسالة جديدة: ', payload);
+            alert("تنبيه جديد: " + payload.notification.body);
+        });
+        // --- حماية الموقع ---
+        document.onkeydown = function (e) {
+            if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
+        };
+
+        // --- نظام التقويم المزدوج ---
+        function updateDates() {
+            const now = new Date();
+
+            // 1. التاريخ الميلادي (أبيض/سيان)
+            const gregOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('gregorian-date').innerText = now.toLocaleDateString('ar-EG', gregOptions);
+
+            // 2. التاريخ الهجري (ذهبي - متوافق مع مصر)
+            // ملاحظة: يمكنك تعديل الـ offset إذا كان هناك فرق يوم في الرؤية
+            const offsetDays = -1;
+            const hijriDate = new Date(now.getTime() + (offsetDays * 24 * 60 * 60 * 1000));
+
+            const hijriOptions = { day: 'numeric', month: 'long', year: 'numeric', calendar: 'islamic-umalqura' };
+            document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', hijriOptions).format(hijriDate);
+        }
+
+        // --- جلب مواقيت الصلاة لمصر ---
+        async function getPrayerTimes() {
+            try {
+                const res = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5');
+                const data = await res.json();
+                const t = data.data.timings;
+                document.getElementById('fajr').innerText = t.Fajr;
+                document.getElementById('dhuhr').innerText = t.Dhuhr;
+                document.getElementById('asr').innerText = t.Asr;
+                document.getElementById('maghrib').innerText = t.Maghrib;
+                document.getElementById('isha').innerText = t.Isha;
+            } catch (err) {
+                console.log("خطأ في جلب المواقيت");
+            }
+        }
+
+        // --- نظام التنقل بين التبويبات ---
+        function showTab(tabId, el) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        // 1. نظام البحث الذكي
+        function smartSearch() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let items = document.getElementsByClassName('searchable-item');
+            let links = document.getElementsByClassName('companion-link');
+
+            // البحث في النصوص
+            for (let item of items) {
+                item.style.display = item.innerText.toLowerCase().includes(input) ? "block" : "none";
+            }
+            // البحث في روابط الصحابة
+            for (let link of links) {
+                link.style.display = link.innerText.toLowerCase().includes(input) ? "block" : "none";
+            }
+        }
+
+        // 2. الوضع الليلي التلقائي (بعد العشاء 8 م وحتى الفجر 5 ص)
+        function autoNightMode() {
+            const hour = new Date().getHours();
+            if (hour >= 20 || hour < 5) {
+                document.body.classList.add('night-mode');
+            } else {
+                document.body.classList.remove('night-mode');
+            }
+        }
+        setInterval(autoNightMode, 60000); // تحقق كل دقيقة
+        autoNightMode();
+
+        // 3. سبحة إلكترونية مع اهتزاز وصوت
+        let count = 0;
+        const tickSound = new Audio('https://www.soundjay.com/buttons/sounds/button-16.mp3'); // صوت خفيف
+
+        function vibrateTasbih() {
+            count++;
+            document.getElementById('tasbih-count').innerText = count;
+
+            // اهتزاز للموبايل
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            // تشغيل الصوت
+            tickSound.play();
+        }
+
+        // 4. نظام اللغات (مبسط)
+        const translations = {
+            ar: { history: "التاريخ والفتوحات", prayers: "مواقيت الصلاة" },
+            en: { history: "History & Battles", prayers: "Prayer Times" },
+            fr: { history: "Histoire et Batailles", prayers: "Heures de Prière" }
+        };
+
+        // 1. نظام الترجمة الشامل
+        const i18n = {
+            ar: {
+                lib_title: "مذهب الأئمة الأربعة",
+                home: "الرئيسية",
+                quran: "القرآن",
+                azkar: "الأذكار",
+                history: "التاريخ",
+                library: "المكتبة",
+                prayer_times: "مواقيت الصلاة"
+            },
+            en: {
+                lib_title: "The Four Imams Library",
+                home: "Home",
+                quran: "Quran",
+                azkar: "Athkar",
+                history: "History",
+                library: "Library",
+                prayer_times: "Prayer Times"
+            },
+            fr: {
+                lib_title: "Bibliothèque des 4 Imams",
+                home: "Accueil",
+                quran: "Coran",
+                azkar: "Invocations",
+                history: "Histoire",
+                library: "Bibliothèque",
+                prayer_times: "Heures de Prière"
+            }
+        };
+
+        function setLanguage(lang) {
+            // تغيير اتجاه الصفحة
+            document.body.style.direction = (lang === 'ar') ? 'rtl' : 'ltr';
+
+            // ترجمة العناصر التي تحمل data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.innerText = i18n[lang][key];
+            });
+
+            // ترجمة أزرار المنيو السفلي
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems[0].lastChild.textContent = i18n[lang].home;
+            navItems[1].lastChild.textContent = i18n[lang].quran;
+            navItems[2].lastChild.textContent = i18n[lang].azkar;
+            navItems[3].lastChild.textContent = i18n[lang].history;
+            navItems[4].lastChild.textContent = i18n[lang].library;
+
+            localStorage.setItem('selectedLang', lang);
+        }
+
+        // 2. نظام تبديل الثيم (Dark/Light)
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        }
+
+        // عند تحميل الصفحة، استرجع الإعدادات المفضلة
+        window.onload = () => {
+            updateDates();
+            getPrayerTimes();
+
+            const savedLang = localStorage.getItem('selectedLang') || 'ar';
+            setLanguage(savedLang);
+
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') document.body.classList.add('light-theme');
+        };
+
+        // 5. مكان الربط مع Firebase (للتنبيهات المستقبيلة)
+        /*
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/9.x.x/firebase-messaging.js";
+        // ضع إعداداتك هنا
+        */
+
+        // التشغيل الأولي
+        // بيانات الكتب (Data) لعرضها داخل التطبيق فوراً
+        const booksData = {
+            fiqh_akbar: {
+                title: "الفقه الأكبر - أبو حنيفة",
+                content: "يُعد كتاب 'الفقه الأكبر' من أقدم وأهم الكتب المنسوبة للإمام أبي حنيفة النعمان في العقيدة الإسلامية. يتناول الكتاب مسائل التوحيد، الصفات الإلهية، والقضاء والقدر. يعتبر هذا الكتاب ركيزة أساسية في فهم عقيدة أهل السنة والجماعة على طريقة الإمام الأعظم."
+            },
+            muwatta: {
+                title: "الموطأ - الإمام مالك",
+                content: "كتاب 'الموطأ' هو أقدم كتاب جامع للحديث والفقه مرتب على الأبواب، ألفه الإمام مالك بن أنس لأكثر من أربعين سنة. قال عنه الشافعي: 'ما على ظهر الأرض كتاب بعد كتاب الله أصح من كتاب مالك'."
+            },
+            al_umm: {
+                title: "كتاب الأم - الإمام الشافعي",
+                content: "كتاب 'الأم' هو موسوعة فقهية ضخمة تعبر عن المذهب الجديد للإمام الشافعي الذي وضعه في مصر. يتميز الكتاب بأسلوب المناظرة والاستدلال بالقرآن والسنة، ويغطي كافة أبواب الفقه من العبادات إلى المعاملات."
+            },
+            musnad_ahmad: {
+                title: "مسند أحمد - الإمام أحمد",
+                content: "يعتبر 'المسند' من أكبر كتب السنة النبوية، حيث يحتوي على أكثر من 27 ألف حديث نبوي. رتبه الإمام أحمد بن حنبل حسب أسماء الصحابة الذين رووا الأحاديث، وهو مرجع أساسي لعلماء الحديث والفقه عبر العصور."
+            }
+        };
+
+        function showBookInfo(key) {
+            const book = booksData[key];
+            document.getElementById('modalTitle').innerText = book.title;
+            document.getElementById('modalBody').innerText = book.content;
+            document.getElementById('bookModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('bookModal').style.display = 'none';
+        }
+
+        // تحديث وظيفة تغيير الثيم (Light/Dark) لتشمل تغيير الخلفيات بشكل أوضح
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+
+            // تغيير صورة الخلفية يدوياً لضمان التغيير
+            if (isLight) {
+                document.body.style.backgroundImage = "linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://images.unsplash.com/photo-1590076215667-873d312dc86c?q=80&w=2070')";
+            } else {
+                document.body.style.backgroundImage = "linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=2070')";
+            }
+
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        }
+        updateDates();
+        getPrayerTimes();
+    </script>
+</body>
+
+</html>
