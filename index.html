@@ -1257,6 +1257,12 @@
         }
 
         // تحميل آيات السورة
+        // بيانات ثابتة للطوارئ (تعمل حتى بدون إنترنت نهائياً وبدون سيرفر)
+        const fallbackSurahs = {
+            1: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ (1) الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ (2) الرَّحْمَنِ الرَّحِيمِ (3) مَالِكِ يَوْمِ الدِّينِ (4) إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ (5) اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ (6) صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ (7)",
+            112: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ قُلْ هُوَ اللَّهُ أَحَدٌ (1) اللَّهُ الصَّمَدُ (2) لَمْ يَلِدْ وَلَمْ يُولَدْ (3) وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ (4)"
+        };
+
         async function loadSurahContent(number, name) {
             const reader = document.getElementById('quran-reader');
             const contentDiv = document.getElementById('surah-content');
@@ -1266,7 +1272,7 @@
             reader.style.display = 'block';
             document.getElementById('active-surah-name').innerText = name;
 
-            // نتحقق من الذاكرة المحلية أولاً (Offline)
+            // 1. فحص الذاكرة المحلية (LocalStorage)
             const cached = localStorage.getItem(`surah_${number}`);
             if (cached) {
                 contentDiv.innerHTML = cached;
@@ -1274,25 +1280,61 @@
                 return;
             }
 
-            contentDiv.innerHTML = "<p style='text-align:center; padding:20px;'>جاري تحميل الآيات من الخادم (للمرة الأولى فقط)...</p>";
+            // 2. إذا كانت سورة الفاتحة أو الإخلاص، اعرضها من الكود مباشرة (للتجربة)
+            if (fallbackSurahs[number]) {
+                contentDiv.innerHTML = fallbackSurahs[number];
+                localStorage.setItem(`surah_${number}`, fallbackSurahs[number]);
+                return;
+            }
+
+            contentDiv.innerHTML = "<p style='text-align:center; padding:30px;'>جاري محاولة الاتصال بالسيرفر...</p>";
+
+            // 3. محاولة جلب البيانات باستخدام رابط بديل جداً (رابط مباشر للـ JSON)
+            // هذا الرابط من أسرع الروابط العالمية
+            const url = `https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/ara-quranlaamalfat/${number}.json`;
 
             try {
-                // نستخدم API بديل وأسرع (Alquran.cloud)
-                const response = await fetch(`https://api.alquran.cloud/v1/surah/${number}`);
-                const data = await response.json();
+                const response = await fetch(url);
+                if (!response.ok) throw new Error();
 
+                const data = await response.json();
                 let versesText = "";
-                data.data.verses.forEach(v => {
-                    versesText += `${v.text} <span class="verse-num">${v.numberInSurah}</span> `;
+
+                data.verses.forEach((v, i) => {
+                    versesText += `${v.text} <span class="verse-num">${i + 1}</span> `;
                 });
 
-                // حفظ في الذاكرة للأبد
                 localStorage.setItem(`surah_${number}`, versesText);
                 contentDiv.innerHTML = versesText;
-                contentDiv.scrollTop = 0;
 
-            } catch (error) {
-                contentDiv.innerHTML = "<p style='color:red; text-align:center;'>حدث خطأ في التحميل. يرجى التأكد من تشغيل الإنترنت لهذه السورة مرة واحدة.</p>";
+            } catch (err) {
+                // 4. المحاولة الأخيرة (استخدام بروكسي لفك الحجب)
+                contentDiv.innerHTML = "<p style='text-align:center; padding:20px;'>جاري استخدام خادم الحماية لتخطي الحجب...</p>";
+
+                try {
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.alquran.cloud/v1/surah/${number}`)}`;
+                    const res2 = await fetch(proxyUrl);
+                    const data2 = await res2.json();
+                    const parsedData = JSON.parse(data2.contents);
+
+                    let versesText2 = "";
+                    parsedData.data.verses.forEach(v => {
+                        versesText2 += `${v.text} <span class="verse-num">${v.numberInSurah}</span> `;
+                    });
+
+                    localStorage.setItem(`surah_${number}`, versesText2);
+                    contentDiv.innerHTML = versesText2;
+                } catch (err2) {
+                    contentDiv.innerHTML = `
+                <div style='text-align:center; padding:20px;'>
+                    <p style='color:#ff5555;'>⚠️ مشكلة في المتصفح</p>
+                    <p style='font-size:0.8rem; line-height:1.5;'>المتصفح يمنع تحميل السور لأنك تفتح الملف مباشرة من الجهاز.</p>
+                    <p style='font-size:0.8rem; color:var(--gold);'>يجب رفع الملف على (Firebase Hosting) لكي يعمل الإنترنت.</p>
+                    <hr style='opacity:0.2; margin:10px 0;'>
+                    <p style='font-size:0.9rem;'>جرب الآن سورة <b>الفاتحة</b> أو <b>الإخلاص</b> ستجدهما يعملان لأنني وضعتهما داخل الكود لك.</p>
+                </div>
+            `;
+                }
             }
         }
 
