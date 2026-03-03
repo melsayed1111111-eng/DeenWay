@@ -12,7 +12,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-analytics-compat.js"></script>
-
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffcc00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
         :root {
             --glass: rgba(0, 0, 0, 0.6);
@@ -994,6 +996,28 @@
             const lastTab = localStorage.getItem('activeTab') || 'home';
             showTab(lastTab);
         };
+
+        // تسجيل السيرفس وركر لتمكين التثبيت والإشعارات
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('firebase-messaging-sw.js')
+                    .then(reg => {
+                        console.log('تم تسجيل Service Worker بنجاح: ', reg.scope);
+                    })
+                    .catch(err => {
+                        console.log('فشل تسجيل Service Worker: ', err);
+                    });
+            });
+        }
+
+        // دالة إضافية لتنبيه المستخدم بتثبيت التطبيق
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // يمكنك هنا إظهار زر للمستخدم يطلب منه "تثبيت التطبيق"
+            console.log("التطبيق جاهز للتنصيب على أندرويد");
+        });
 
         setInterval(autoNightMode, 60000);
     </script>
