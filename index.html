@@ -383,6 +383,51 @@
             margin-bottom: 2px;
         }
 
+        /* تعديل المنيو السفلي ليتسع لـ 6 أزرار */
+        .bottom-nav {
+            display: grid !important;
+            grid-template-columns: repeat(6, 1fr) !important;
+            font-size: 0.6rem !important;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Amiri&display=swap');
+
+        #surah-content {
+            font-family: 'Amiri', serif;
+            direction: rtl;
+        }
+
+        .surah-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 5px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .surah-item:hover {
+            background: var(--gold);
+            color: black;
+        }
+
+        .verse-num {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: var(--gold);
+            color: black;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 0.7rem;
+            margin: 0 5px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+
         @keyframes pulse {
             0% {
                 transform: scale(1);
@@ -467,6 +512,30 @@
                     مباشر (MP3)</a>
                 <a href="https://quran.ksu.edu.sa/index.php?l=ar" data-i18n="Tafsir of the Verses" target="_blank"
                     class="btn-link">🔍 تفسير الآيات</a>
+            </div>
+        </section>
+
+        <!-- القسم الجديد: مصحف بدون إنترنت -->
+        <section id="quran-offline" class="section">
+            <div class="glass-card">
+                <h2 data-i18n="quran_offline">📖 مصحف أوفلاين</h2>
+
+                <div id="surah-list-container">
+                    <input type="text" id="surahSearch" class="search-input" placeholder="ابحث عن اسم السورة..."
+                        onkeyup="filterSurahs()">
+                    <div id="surah-list">
+                        <!-- السور ستظهر هنا فوراً -->
+                    </div>
+                </div>
+
+                <div id="quran-reader" style="display: none;">
+                    <button onclick="backToSurahList()" class="btn-link">⬅️ العودة للقائمة</button>
+                    <h3 id="active-surah-name" style="color: var(--gold); margin: 15px 0;"></h3>
+                    <div id="surah-content"
+                        style="text-align: right; font-size: 1.4rem; font-family: 'Amiri', serif; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; max-height: 400px; overflow-y: auto;">
+                        <!-- الآيات -->
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -708,19 +777,22 @@
     <!-- شريط التنقل السفلي -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="showTab('home', this)">
-            <div>🏠</div>الرئيسية
+            <div>🏠</div><span data-i18n="home">الرئيسية</span>
         </div>
         <div class="nav-item" onclick="showTab('quran', this)">
-            <div>📖</div>القرآن
+            <div>🌐</div><span data-i18n="quran">قرآن أونلاين</span>
+        </div>
+        <div class="nav-item" onclick="showTab('quran-offline', this)">
+            <div>📖</div><span data-i18n="quran_offline">مصحف أوفلاين</span>
         </div>
         <div class="nav-item" onclick="showTab('azkar', this)">
-            <div>📿</div>الأذكار
+            <div>📿</div><span data-i18n="azkar">الأذكار</span>
         </div>
         <div class="nav-item" onclick="showTab('history-new', this)">
-            <div>⚔️</div>التاريخ
+            <div>⚔️</div><span data-i18n="history">التاريخ</span>
         </div>
         <div class="nav-item" onclick="showTab('library', this)">
-            <div>📜</div>المكتبة
+            <div>📜</div><span data-i18n="library">المكتبة</span>
         </div>
     </nav>
 
@@ -891,7 +963,7 @@
         const i18n = {
             ar: {
                 app_name: "تطبيق الهدى",
-                home: "الرئيسية", quran: "القرآن", azkar: "الأذكار", history: "التاريخ", library: "المكتبة",
+                home: "الرئيسية", quran: "القرآن", quran_offline: "أوفلاين", azkar: "الأذكار", history: "التاريخ", library: "المكتبة",
                 prayer_times: "مواقيت الصلاة",
                 fajr: "الفجر", dhuhr: "الظهر", asr: "العصر", maghrib: "المغرب", isha: "العشاء",
                 stop_adhan: "إيقاف الأذان",
@@ -913,7 +985,7 @@
             },
             en: {
                 app_name: "Al-Huda App",
-                home: "Home", quran: "Quran", azkar: "Athkar", history: "History", library: "Library",
+                home: "Home", quran: "Quran", quran_offline: "Offline", azkar: "Athkar", history: "History", library: "Library",
                 prayer_times: "Prayer Times",
                 fajr: "Fajr", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha",
                 stop_adhan: "Stop Adhan",
@@ -932,7 +1004,7 @@
             },
             fr: {
                 app_name: "App Al-Huda",
-                home: "Accueil", quran: "Coran", azkar: "Invocations", history: "Histoire", library: "Bibliothèque",
+                home: "Accueil", quran: "Coran", quran_offline: "Hors-ligne", azkar: "Invocations", history: "Histoire", library: "Bibliothèque",
                 prayer_times: "Heures de Prière",
                 fajr: "Fajr", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha",
                 stop_adhan: "Arrêter l'Adhan",
@@ -952,11 +1024,12 @@
         };
 
         function setLanguage(lang) {
+            // 1. تغيير اتجاه الصفحة
             const dir = (lang === 'ar') ? 'rtl' : 'ltr';
             document.documentElement.dir = dir;
             document.body.style.direction = dir;
 
-            // ترجمة كل عنصر يحتوي على data-i18n
+            // 2. ترجمة العناصر التي تحمل data-i18n (العناوين والمحتوى)
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (i18n[lang][key]) {
@@ -964,16 +1037,17 @@
                 }
             });
 
-            // ترجمة الـ Placeholder لخانة البحث
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) searchInput.placeholder = i18n[lang].search_placeholder;
-
-            // ترجمة أزرار المنيو السفلي (أيقونة + نص)
+            // 3. ترجمة أزرار المنيو السفلي الستة بالترتيب الصحيح
             const navItems = document.querySelectorAll('.nav-item');
-            const navKeys = ['home', 'quran', 'azkar', 'history', 'library'];
+            // الترتيب: الرئيسية (0)، أونلاين (1)، أوفلاين (2)، أذكار (3)، تاريخ (4)، مكتبة (5)
+            const navKeys = ['home', 'quran', 'quran_offline', 'azkar', 'history', 'library'];
+
             navItems.forEach((item, index) => {
-                const icon = item.querySelector('div').innerText;
-                item.innerHTML = `<div>${icon}</div>${i18n[lang][navKeys[index]]}`;
+                if (navKeys[index] && i18n[lang][navKeys[index]]) {
+                    const iconDiv = item.querySelector('div');
+                    const icon = iconDiv ? iconDiv.innerText : ""; // الحفاظ على الإيموجي
+                    item.innerHTML = `<div>${icon}</div>${i18n[lang][navKeys[index]]}`;
+                }
             });
 
             localStorage.setItem('selectedLang', lang);
@@ -1159,6 +1233,89 @@
             }
         });
 
+        // --- برمجة المصحف أوفلاين (النسخة المطورة والسريعة) ---
+        // قائمة أسماء السور (تضمن ظهور القائمة فوراً دون انتظار إنترنت)
+        const surahNames = [
+            "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"
+        ];
+
+        // دالة تشغيل المصحف (تُستدعى عند فتح الصفحة)
+        function initQuran() {
+            const list = document.getElementById('surah-list');
+            if (!list) return;
+
+            list.innerHTML = '';
+            surahNames.forEach((name, index) => {
+                const surahNumber = index + 1;
+                list.innerHTML += `
+            <div class="surah-item" onclick="loadSurahContent(${surahNumber}, '${name}')">
+                <span>${surahNumber}. ${name}</span>
+                <span style="font-size: 0.7rem; opacity: 0.6;">إضغط للتحميل والقراءة</span>
+            </div>
+        `;
+            });
+        }
+
+        // تحميل آيات السورة
+        async function loadSurahContent(number, name) {
+            const reader = document.getElementById('quran-reader');
+            const contentDiv = document.getElementById('surah-content');
+            const listContainer = document.getElementById('surah-list-container');
+
+            listContainer.style.display = 'none';
+            reader.style.display = 'block';
+            document.getElementById('active-surah-name').innerText = name;
+
+            // نتحقق من الذاكرة المحلية أولاً (Offline)
+            const cached = localStorage.getItem(`surah_${number}`);
+            if (cached) {
+                contentDiv.innerHTML = cached;
+                contentDiv.scrollTop = 0;
+                return;
+            }
+
+            contentDiv.innerHTML = "<p style='text-align:center; padding:20px;'>جاري تحميل الآيات من الخادم (للمرة الأولى فقط)...</p>";
+
+            try {
+                // نستخدم API بديل وأسرع (Alquran.cloud)
+                const response = await fetch(`https://api.alquran.cloud/v1/surah/${number}`);
+                const data = await response.json();
+
+                let versesText = "";
+                data.data.verses.forEach(v => {
+                    versesText += `${v.text} <span class="verse-num">${v.numberInSurah}</span> `;
+                });
+
+                // حفظ في الذاكرة للأبد
+                localStorage.setItem(`surah_${number}`, versesText);
+                contentDiv.innerHTML = versesText;
+                contentDiv.scrollTop = 0;
+
+            } catch (error) {
+                contentDiv.innerHTML = "<p style='color:red; text-align:center;'>حدث خطأ في التحميل. يرجى التأكد من تشغيل الإنترنت لهذه السورة مرة واحدة.</p>";
+            }
+        }
+
+        function backToSurahList() {
+            document.getElementById('surah-list-container').style.display = 'block';
+            document.getElementById('quran-reader').style.display = 'none';
+        }
+
+        // دالة البحث في السور
+        function filterSurahs() {
+            let input = document.getElementById('surahSearch').value;
+            let items = document.getElementsByClassName('surah-item');
+            for (let item of items) {
+                item.style.display = item.innerText.includes(input) ? "flex" : "none";
+            }
+        }
+
+        // تأكد من إضافة الاستدعاء في window.onload
+        const oldLoad = window.onload;
+        window.onload = () => {
+            if (oldLoad) oldLoad();
+            initQuran(); // تشغيل قائمة السور فوراً
+        };
         setInterval(autoNightMode, 60000);
     </script>
 </body>
