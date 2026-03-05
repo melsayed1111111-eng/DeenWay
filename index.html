@@ -925,7 +925,7 @@
             Notification.requestPermission().then((permission) => {
                 if (permission === 'granted') {
                     console.log('تم منح إذن التنبيهات.');
-                    messaging.getToken({ vapidKey: 'ضع_هنا_مفتاح_VAPID_الخاص_بك' })
+                    messaging.getToken({ vapidKey: 'BOLD7_jdV0L1wfAnzrHyHyQbyLmO54gqV6LNKRsCDQEM0GiWsnRRm-bRzXhb_8nTQBueWMjEsfO7N2frBpaqsYo' })
                         .then((currentToken) => {
                             if (currentToken) {
                                 console.log("Token المستخدم: ", currentToken);
@@ -999,20 +999,48 @@
             }
         }
 
+        let preAdhanPlayed = false; // لمنع تكرار تنبيه الـ 5 دقائق
+
         function checkAdhanTime(times) {
             const now = new Date();
-            const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            const currentTime = now.getHours().toString().padStart(2, '0') + ":" +
+                now.getMinutes().toString().padStart(2, '0');
+
+            // حساب الوقت بعد 5 دقائق من الآن
+            const fiveMinsLater = new Date(now.getTime() + 5 * 60000);
+            const alertTime = fiveMinsLater.getHours().toString().padStart(2, '0') + ":" +
+                fiveMinsLater.getMinutes().toString().padStart(2, '0');
+
             const prayerNames = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
             prayerNames.forEach(name => {
-                if (currentTime === times[name] && !adhanPlayed) {
+                let pTime = times[name];
+
+                // 1. تنبيه قبل الأذان بـ 5 دقائق
+                if (alertTime === pTime && !preAdhanPlayed) {
+                    sendNotification(`⏳ اقتربت صلاة ${name}`, `بقي 5 دقائق على الأذان.. استعد للوضوء.`);
+                    preAdhanPlayed = true;
+                    // تشغيل صوت تنبيه خفيف
+                    const alertSound = new Audio('https://www.soundjay.com/buttons/sounds/beep-07.mp3');
+                    alertSound.play();
+                }
+
+                // 2. وقت الأذان الفعلي
+                if (currentTime === pTime && !adhanPlayed) {
                     playAdhan(name);
+                    sendNotification(`🕌 حان الآن أذان ${name}`, `حي على الصلاة.. حي على الفلاح.`);
                     adhanPlayed = true;
-                    sendNotification("حان الآن وقت صلاة " + name, "حي على الصلاة.. حي على الفلاح");
                 }
             });
 
-            if (now.getSeconds() === 59) adhanPlayed = false;
+            // تصفير الحالات عند تغير الدقيقة لضمان العمل في اليوم التالي
+            if (now.getSeconds() === 0) {
+                const isStillAdhan = prayerNames.some(n => times[n] === currentTime);
+                if (!isStillAdhan) adhanPlayed = false;
+
+                const isStillAlert = prayerNames.some(n => times[n] === alertTime);
+                if (!isStillAlert) preAdhanPlayed = false;
+            }
         }
 
         function playAdhan(prayerName) {
@@ -1037,9 +1065,25 @@
             document.getElementById('tasbih-count').innerText = count;
             localStorage.setItem('tasbihCount', count);
 
+            // 1. الاهتزاز العادي لكل تسبيحة
+            if (navigator.vibrate) navigator.vibrate(40);
+
+            // 2. اهتزاز طويل ومميز عند رقم 33 و 66 و 99
+            if (count % 33 === 0 && count !== 100) {
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                console.log("وصلت لـ 33 تسبيحة");
+            }
+
+            // 3. اهتزاز قوي جداً عند رقم 100 (نهاية الدورة)
+            if (count === 100) {
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
+                alert("ما شاء الله! أتممت 100 تسبيحة.");
+                // يمكنك تصفير العداد تلقائياً هنا إذا أردت: count = 0;
+            }
+
+            // تشغيل صوت النقر
             tasbihSound.currentTime = 0;
             tasbihSound.play().catch(() => { });
-            if (navigator.vibrate) navigator.vibrate(40);
         }
 
         function resetTasbih() {
@@ -1614,6 +1658,15 @@
             const p = h >= 12 ? 'م' : 'ص';
             h = h % 12 || 12;
             return `${h}:${m} ${p}`;
+        }
+        // تسجيل المحرك (Service Worker)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('firebase-messaging-sw.js')
+                .then((registration) => {
+                    console.log('تم تسجيل المحرك بنجاح ونطاق العمل هو:', registration.scope);
+                }).catch((err) => {
+                    console.log('فشل تسجيل المحرك:', err);
+                });
         }
         setInterval(autoNightMode, 60000);
     </script>
