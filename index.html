@@ -462,6 +462,51 @@
             box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3);
         }
 
+        /* تصميم البوصلة */
+        .compass-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 20px auto;
+            border-radius: 50%;
+            background: var(--glass);
+            border: 4px solid var(--gold);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(255, 204, 0, 0.2);
+        }
+
+        .compass-dial {
+            width: 100%;
+            height: 100%;
+            background: url('https://cdn-icons-png.flaticon.com/512/3261/3261313.png');
+            /* صورة درجات البوصلة */
+            background-size: contain;
+            transition: transform 0.1s ease-out;
+        }
+
+        .kaaba-pointer {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: url('https://cdn-icons-png.flaticon.com/512/2965/2965427.png') no-repeat center;
+            background-size: contain;
+            top: 10px;
+            z-index: 10;
+        }
+
+        .qibla-needle {
+            position: absolute;
+            width: 4px;
+            height: 100px;
+            background: var(--gold);
+            bottom: 50%;
+            transform-origin: bottom center;
+            border-radius: 4px;
+            box-shadow: 0 0 10px var(--gold);
+        }
+
         @keyframes pulse {
             0% {
                 transform: scale(1);
@@ -570,6 +615,25 @@
                         <!-- الآيات -->
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <section id="qibla" class="section">
+            <div class="glass-card" style="text-align: center;">
+                <h2 style="color: var(--gold);">تحديد اتجاه القبلة</h2>
+                <p style="font-size: 0.8rem; margin-bottom: 10px;">يرجى وضع الهاتف بشكل مسطح وبعيداً عن المعادن</p>
+
+                <div class="compass-container">
+                    <div id="compassDial" class="compass-dial"></div>
+                    <div id="qiblaPointer" class="qibla-needle"></div>
+                    <div class="kaaba-pointer"></div>
+                </div>
+
+                <div id="qiblaDegrees" style="margin-top: 15px; font-weight: bold; color: var(--gold);">
+                    جاري تحديد موقعك...
+                </div>
+                <button onclick="initQibla()" class="btn-link"
+                    style="background:var(--gold); color:black; margin-top:10px;">تفعيل البوصلة</button>
             </div>
         </section>
 
@@ -811,22 +875,25 @@
     <!-- شريط التنقل السفلي -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="showTab('home', this)">
-            <div>🏠</div><span data-i18n="home">الرئيسية</span>
+            <div>🏠</div>الرئيسية
         </div>
         <div class="nav-item" onclick="showTab('quran', this)">
-            <div>🌐</div><span data-i18n="quran">قرآن أونلاين</span>
+            <div>🌐</div>أونلاين
         </div>
         <div class="nav-item" onclick="showTab('quran-offline', this)">
-            <div>📖</div><span data-i18n="quran_offline">مصحف أوفلاين</span>
+            <div>📖</div>أوفلاين
         </div>
+        <div class="nav-item" onclick="showTab('qibla', this)">
+            <div>🕋</div>القبلة
+        </div> <!-- التابة الجديدة -->
         <div class="nav-item" onclick="showTab('azkar', this)">
-            <div>📿</div><span data-i18n="azkar">الأذكار</span>
+            <div>📿</div>الأذكار
         </div>
-        <div class="nav-item" onclick="showTab('history-new', this)">
-            <div>⚔️</div><span data-i18n="history">التاريخ</span>
+        <div class="nav-item" onclick="showTab('history', this)">
+            <div>⚔️</div>التاريخ
         </div>
         <div class="nav-item" onclick="showTab('library', this)">
-            <div>📜</div><span data-i18n="library">المكتبة</span>
+            <div>📜</div>المكتبة
         </div>
     </nav>
 
@@ -919,11 +986,12 @@
                 const data = await res.json();
                 const t = data.data.timings;
 
-                document.getElementById('fajr').innerText = t.Fajr;
-                document.getElementById('dhuhr').innerText = t.Dhuhr;
-                document.getElementById('asr').innerText = t.Asr;
-                document.getElementById('maghrib').innerText = t.Maghrib;
-                document.getElementById('isha').innerText = t.Isha;
+                // تطبيق التحويل عند وضع الوقت في العناصر
+                document.getElementById('fajr').innerText = formatTime12(t.Fajr);
+                document.getElementById('dhuhr').innerText = formatTime12(t.Dhuhr);
+                document.getElementById('asr').innerText = formatTime12(t.Asr);
+                document.getElementById('maghrib').innerText = formatTime12(t.Maghrib);
+                document.getElementById('isha').innerText = formatTime12(t.Isha);
 
                 setInterval(() => checkAdhanTime(t), 1000);
             } catch (err) {
@@ -1399,6 +1467,92 @@
             if (oldLoad) oldLoad();
             initQuran(); // تشغيل قائمة السور فوراً
         };
+        function formatTime12(time24) {
+            if (!time24) return "--:--";
+
+            // تقسيم الوقت إلى ساعات ودقائق
+            let [hours, minutes] = time24.split(':');
+            hours = parseInt(hours);
+
+            // تحديد هل التوقيت صباحاً أم مساءً
+            const period = hours >= 12 ? 'م' : 'ص';
+
+            // تحويل الساعة إلى نظام 12 (الساعة 0 تصبح 12، والساعة 13 تصبح 1)
+            hours = hours % 12 || 12;
+
+            // إعادة الوقت بتنسيق جميل
+            return `${hours}:${minutes} ${period}`;
+        }
+        // --- برمجة القبلة والبوصلة ---
+        let userLocation = { lat: 0, lng: 0 };
+        let qiblaAngle = 0;
+
+        function initQibla() {
+            // 1. الحصول على الموقع الجغرافي
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    userLocation.lat = position.coords.latitude;
+                    userLocation.lng = position.coords.longitude;
+
+                    // حساب زاوية القبلة (مكة المكرمة)
+                    qiblaAngle = calculateQiblaAngle(userLocation.lat, userLocation.lng);
+                    document.getElementById('qiblaDegrees').innerText = `زاوية القبلة: ${Math.round(qiblaAngle)}°`;
+
+                    // 2. تفعيل حساس الاتجاه
+                    startCompass();
+                }, () => alert("يرجى تفعيل الموقع الجغرافي لحساب القبلة."));
+            }
+        }
+
+        function calculateQiblaAngle(lat, lng) {
+            const kaabaLat = 21.4225 * Math.PI / 180;
+            const kaabaLng = 39.8262 * Math.PI / 180;
+            const myLat = lat * Math.PI / 180;
+            const myLng = lng * Math.PI / 180;
+
+            const y = Math.sin(kaabaLng - myLng);
+            const x = Math.cos(myLat) * Math.tan(kaabaLat) - Math.sin(myLat) * Math.cos(kaabaLng - myLng);
+
+            let angle = Math.atan2(y, x) * 180 / Math.PI;
+            return (angle + 360) % 360;
+        }
+
+        function startCompass() {
+            if (window.DeviceOrientationEvent) {
+                // للموافقة في آيفون (iOS 13+)
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    DeviceOrientationEvent.requestPermission().then(state => {
+                        if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                    });
+                } else {
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            } else {
+                alert("متصفحك لا يدعم حساس البوصلة.");
+            }
+        }
+
+        function handleOrientation(e) {
+            // الحصول على اتجاه الشمال (Heading)
+            let heading = e.webkitCompassHeading || (360 - e.alpha);
+
+            if (heading) {
+                // تدوير درجات البوصلة
+                document.getElementById('compassDial').style.transform = `rotate(${-heading}px)`;
+                // تدوير إبرة القبلة بناءً على زاوية القبلة المحسوبة
+                document.getElementById('qiblaPointer').style.transform = `rotate(${qiblaAngle - heading}deg)`;
+            }
+        }
+
+        // دالة تحويل التوقيت (التي طلبتها سابقاً)
+        function formatTime12(time24) {
+            if (!time24) return "--:--";
+            let [h, m] = time24.split(':');
+            h = parseInt(h);
+            const p = h >= 12 ? 'م' : 'ص';
+            h = h % 12 || 12;
+            return `${h}:${m} ${p}`;
+        }
         setInterval(autoNightMode, 60000);
     </script>
 </body>
