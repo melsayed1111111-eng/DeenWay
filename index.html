@@ -1489,13 +1489,13 @@
 
         async function initQibla() {
             const statusText = document.getElementById('qiblaDegrees');
-            statusText.innerText = "جاري محاولة تحديد موقعك الجغرافي...";
+            statusText.innerHTML = "جاري تحديد الموقع... <br><span style='font-size:0.7rem; opacity:0.6;'>يرجى السماح بالوصول للموقع</span>";
 
-            // إعدادات الموقع لضمان السرعة والدقة
+            // إعدادات متوازنة تعمل على الكمبيوتر والموبايل بدون تعليق
             const geoOptions = {
-                enableHighAccuracy: true, // طلب دقة عالية
-                timeout: 10000,           // انتهاء المحاولة بعد 10 ثواني
-                maximumAge: 0             // عدم استخدام موقع قديم مخزن
+                enableHighAccuracy: false, // الكمبيوتر لا يحتاج دقة GPS، والموبايل سيعطيك دقة كافية بالشبكة
+                timeout: 8000,             // الانتظار 8 ثوانٍ فقط قبل إظهار خطأ
+                maximumAge: 30000          // استخدام موقع مخزن إذا كان عمره أقل من 30 ثانية
             };
 
             if (navigator.geolocation) {
@@ -1506,22 +1506,18 @@
                         userLocation.lng = position.coords.longitude;
 
                         qiblaAngle = calculateQiblaAngle(userLocation.lat, userLocation.lng);
-                        statusText.innerHTML = `✅ تم تحديد موقعك<br>القبلة على زاوية: ${Math.round(qiblaAngle)}°`;
+                        const distance = calculateDistance(userLocation.lat, userLocation.lng, 21.4225, 39.8262);
+
+                        statusText.innerHTML = `✅ تم التحديد<br>القبلة: ${Math.round(qiblaAngle)}° | المسافة: ${Math.round(distance)} كم`;
 
                         startCompass(); // تشغيل حركة البوصلة
                     },
                     (error) => {
-                        // معالجة الأخطاء بالتفصيل
-                        switch (error.code) {
-                            case error.PERMISSION_DENIED:
-                                statusText.innerHTML = "<span style='color:red;'>⚠️ الإذن مرفوض!</span><br>يرجى الضغط على القفل بجانب رابط الموقع وتفعيل 'الموقع/Location' ثم تحديث الصفحة.";
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                statusText.innerHTML = "<span style='color:red;'>❌ الموقع غير متاح!</span><br>تأكد من تشغيل الـ GPS ووجود إشارة إنترنت قوية.";
-                                break;
-                            case error.TIMEOUT:
-                                statusText.innerHTML = "<span style='color:red;'>⏲️ انتهت المهلة!</span><br>المتصفح استغرق وقتاً طويلاً، حاول مرة أخرى.";
-                                break;
+                        // في حال الفشل، نظهر رسالة واضحة للمستخدم
+                        if (error.code === 1) {
+                            statusText.innerHTML = "<span style='color:red;'>⚠️ الإذن مرفوض</span><br>يرجى تفعيل الموقع من إعدادات المتصفح (أيقونة القفل 🔒).";
+                        } else {
+                            statusText.innerHTML = "<span style='color:red;'>⚠️ تعذر تحديد الموقع</span><br>تأكد من اتصالك بالإنترنت وحاول مجدداً.";
                         }
                     },
                     geoOptions
