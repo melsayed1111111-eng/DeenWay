@@ -543,7 +543,7 @@
             <div class="calendar-card">
                 <div class="hijri-section" id="hijri-date">جاري الحساب...</div>
                 <div class="gregorian-section" id="gregorian-date">...</div>
-                <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.7;">(تقويم مصر الكنانة)</div>
+                <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.7;" id="location-name">جاري تحديد الموقع...</div>
             </div>
 
             <!-- أزرار التحكم العلوية -->
@@ -969,18 +969,18 @@
         const adhanSound = new Audio('https://www.islamcan.com/audio/adhan/azan1.mp3');
         let adhanPlayed = false;
 
-        function updateDates() {
-            const now = new Date();
-            const gregOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('gregorian-date').innerText = now.toLocaleDateString('ar-EG', gregOptions);
+        function updateDates(offsetValue = 0) {
+    const now = new Date();
+    
+    // التاريخ الميلادي
+    const gregOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    document.getElementById('gregorian-date').innerText = now.toLocaleDateString('ar-EG', gregOptions);
 
-            const offsetDays = -1; // تعديل ليتوافق مع رؤية مصر
-            const hijriDate = new Date(now.getTime() + (offsetDays * 24 * 60 * 60 * 1000));
-            const hijriOptions = { day: 'numeric', month: 'long', year: 'numeric', calendar: 'islamic-umalqura' };
-            document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', hijriOptions).format(hijriDate);
-        }
-
-        async function getPrayerTimes() {
+    // التاريخ الهجري بناءً على الأوفست (مصر -1، أغلب الدول الأخرى 0)
+    const hijriDate = new Date(now.getTime() + (offsetValue * 24 * 60 * 60 * 1000));
+    const hijriOptions = { day: 'numeric', month: 'long', year: 'numeric', calendar: 'islamic-umalqura' };
+    document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', hijriOptions).format(hijriDate);
+}
         async function getPrayerTimes() {
     const statusText = document.getElementById('gregorian-date'); // سنستخدمه لعرض اسم المدينة
     
@@ -1712,3 +1712,4 @@ async function fallbackToEgypt() {
 
 
 </html>
+
