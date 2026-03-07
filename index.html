@@ -981,23 +981,61 @@
         }
 
         async function getPrayerTimes() {
+        async function getPrayerTimes() {
+    const statusText = document.getElementById('gregorian-date'); // سنستخدمه لعرض اسم المدينة
+    
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            // جلب المواقيت بناءً على الإحداثيات (خط الطول والعرض) لضمان الدقة في أي دولة
             try {
-                const res = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5');
+                const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=auto`);
                 const data = await res.json();
                 const t = data.data.timings;
+                const meta = data.data.meta;
 
-                // تطبيق التحويل عند وضع الوقت في العناصر
-                document.getElementById('fajr').innerText = formatTime12(t.Fajr);
-                document.getElementById('dhuhr').innerText = formatTime12(t.Dhuhr);
-                document.getElementById('asr').innerText = formatTime12(t.Asr);
-                document.getElementById('maghrib').innerText = formatTime12(t.Maghrib);
-                document.getElementById('isha').innerText = formatTime12(t.Isha);
-
+                // عرض المواقيت
+                displayPrayers(t);
+                
+                // تحديث النص ليظهر المنطقة الزمنية أو الدولة المكتشفة
+                document.getElementById('location-name').innerText = `الموقع الحالي: ${meta.timezone}`;
+                
+                // تحديث التاريخ الهجري بناءً على الدولة المكتشفة
+                updateDates(meta.method.name.includes("Egypt") ? -1 : 0);
+                
+                // بدء مراقبة الأذان
                 setInterval(() => checkAdhanTime(t), 1000);
             } catch (err) {
-                console.log("خطأ في جلب المواقيت");
+                console.log("خطأ في جلب البيانات");
             }
-        }
+        }, () => {
+            // في حالة رفض المستخدم الإذن، نعود لمصر تلقائياً
+            fallbackToEgypt();
+        });
+    } else {
+        fallbackToEgypt();
+    }
+}
+
+// دالة عرض الأرقام في الجدول (مساعدة)
+function displayPrayers(t) {
+    document.getElementById('fajr').innerText = formatTime12(t.Fajr);
+    document.getElementById('dhuhr').innerText = formatTime12(t.Dhuhr);
+    document.getElementById('asr').innerText = formatTime12(t.Asr);
+    document.getElementById('maghrib').innerText = formatTime12(t.Maghrib);
+    document.getElementById('isha').innerText = formatTime12(t.Isha);
+}
+
+// دالة الاحتياط لمصر
+async function fallbackToEgypt() {
+    const res = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5');
+    const data = await res.json();
+    displayPrayers(data.data.timings);
+    document.getElementById('location-name').innerText = "الموقع: مصر (افتراضي)";
+    updateDates(-1); // أوفست مصر
+}
 
         let preAdhanPlayed = false; // لمنع تكرار تنبيه الـ 5 دقائق
 
@@ -1671,5 +1709,6 @@
         setInterval(autoNightMode, 60000);
     </script>
 </body>
+
 
 </html>
