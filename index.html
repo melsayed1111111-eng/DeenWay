@@ -507,6 +507,25 @@
             box-shadow: 0 0 10px var(--gold);
         }
 
+        .adjust-btn {
+            background: var(--glass);
+            border: 1px solid var(--gold);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .adjust-btn:hover {
+            background: var(--gold);
+            color: black;
+        }
+
         @keyframes pulse {
             0% {
                 transform: scale(1);
@@ -543,7 +562,19 @@
             <div class="calendar-card">
                 <div class="hijri-section" id="hijri-date">جاري الحساب...</div>
                 <div class="gregorian-section" id="gregorian-date">...</div>
-                <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.7;" id="location-name">جاري تحديد الموقع...</div>
+                <div style="margin-top: 15px; font-size: 0.8rem; opacity: 0.7;" id="location-name">جاري تحديد الموقع...
+                </div>
+            </div>
+            <!-- واجهة تصحيح التاريخ الهجري -->
+            <div class="hijri-adjuster"
+                style="margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                <button onclick="changeManualOffset(-1)" class="adjust-btn">➖</button>
+                <div
+                    style="font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 10px;">
+                    <span data-i18n="adjust_date">تصحيح التاريخ:</span>
+                    <span id="manualOffsetVal">0</span>
+                </div>
+                <button onclick="changeManualOffset(1)" class="adjust-btn">➕</button>
             </div>
 
             <!-- أزرار التحكم العلوية -->
@@ -970,72 +1001,87 @@
         let adhanPlayed = false;
 
         function updateDates(offsetValue = 0) {
-    const now = new Date();
-    
-    // التاريخ الميلادي
-    const gregOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    document.getElementById('gregorian-date').innerText = now.toLocaleDateString('ar-EG', gregOptions);
+            const now = new Date();
 
-    // التاريخ الهجري بناءً على الأوفست (مصر -1، أغلب الدول الأخرى 0)
-    const hijriDate = new Date(now.getTime() + (offsetValue * 24 * 60 * 60 * 1000));
-    const hijriOptions = { day: 'numeric', month: 'long', year: 'numeric', calendar: 'islamic-umalqura' };
-    document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', hijriOptions).format(hijriDate);
-}
+            // التاريخ الميلادي
+            const gregOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('gregorian-date').innerText = now.toLocaleDateString('ar-EG', gregOptions);
+
+            // التاريخ الهجري بناءً على الأوفست (مصر -1، أغلب الدول الأخرى 0)
+            const hijriDate = new Date(now.getTime() + (offsetValue * 24 * 60 * 60 * 1000));
+            const hijriOptions = { day: 'numeric', month: 'long', year: 'numeric', calendar: 'islamic-umalqura' };
+            document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', hijriOptions).format(hijriDate);
+        }
+
+        // --- دالة جلب المواقيت الذكية (حل مشكلة التعليق) ---
         async function getPrayerTimes() {
-    const statusText = document.getElementById('gregorian-date'); // سنستخدمه لعرض اسم المدينة
-    
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            
-            // جلب المواقيت بناءً على الإحداثيات (خط الطول والعرض) لضمان الدقة في أي دولة
+            const locationDisplay = document.getElementById('location-name');
+
+            // 1. عرض بيانات مصر فوراً كخيار أولي لعدم ترك الشاشة فارغة
+            await fallbackToEgypt();
+
+            // 2. محاولة جلب الموقع الدقيق في الخلفية
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    try {
+                        // جلب المواقيت بناءً على الإحداثيات
+                        const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=auto`);
+                        const data = await res.json();
+                        const t = data.data.timings;
+                        const meta = data.data.meta;
+
+                        // تحديث الجدول بالمواقيت الجديدة
+                        displayPrayers(t);
+
+                        // تحديد الأوفست بناءً على الدولة
+                        let offset = 0;
+                        if (meta.timezone === "Africa/Cairo") {
+                            offset = -1; // تعديل مصر
+                            locationDisplay.innerText = "الموقع الحالي: جمهورية مصر العربية 🇪🇬";
+                        } else {
+                            offset = 0; // باقي العالم
+                            locationDisplay.innerText = `الموقع الحالي: ${meta.timezone}`;
+                        }
+
+                        updateDates(offset);
+                        // تحديث مراقب الأذان بالمواقيت الجديدة
+                        setInterval(() => checkAdhanTime(t), 1000);
+
+                    } catch (err) {
+                        console.log("فشل التحديث التلقائي، البقاء على توقيت مصر.");
+                    }
+                }, (error) => {
+                    console.log("تم رفض الموقع أو تعذر الوصول إليه، البقاء على توقيت مصر.");
+                }, { timeout: 5000 }); // إذا لم يجد الموقع في 5 ثواني يتوقف ويبقي على توقيت مصر
+            }
+        }
+
+        // دالة عرض الأرقام (تأكد من وجودها)
+        function displayPrayers(t) {
+            document.getElementById('fajr').innerText = formatTime12(t.Fajr);
+            document.getElementById('dhuhr').innerText = formatTime12(t.Dhuhr);
+            document.getElementById('asr').innerText = formatTime12(t.Asr);
+            document.getElementById('maghrib').innerText = formatTime12(t.Maghrib);
+            document.getElementById('isha').innerText = formatTime12(t.Isha);
+        }
+
+        // دالة توقيت مصر الافتراضية
+        async function fallbackToEgypt() {
             try {
-                const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=auto`);
+                const res = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5');
                 const data = await res.json();
                 const t = data.data.timings;
-                const meta = data.data.meta;
-
-                // عرض المواقيت
                 displayPrayers(t);
-                
-                // تحديث النص ليظهر المنطقة الزمنية أو الدولة المكتشفة
-                document.getElementById('location-name').innerText = `الموقع الحالي: ${meta.timezone}`;
-                
-                // تحديث التاريخ الهجري بناءً على الدولة المكتشفة
-                updateDates(meta.method.name.includes("Egypt") ? -1 : 0);
-                
-                // بدء مراقبة الأذان
+                document.getElementById('location-name').innerText = "الموقع: مصر (تلقائي)";
+                updateDates(-1); // أوفست مصر الافتراضي
                 setInterval(() => checkAdhanTime(t), 1000);
             } catch (err) {
-                console.log("خطأ في جلب البيانات");
+                document.getElementById('location-name').innerText = "خطأ في الاتصال بالإنترنت";
             }
-        }, () => {
-            // في حالة رفض المستخدم الإذن، نعود لمصر تلقائياً
-            fallbackToEgypt();
-        });
-    } else {
-        fallbackToEgypt();
-    }
-}
-
-// دالة عرض الأرقام في الجدول (مساعدة)
-function displayPrayers(t) {
-    document.getElementById('fajr').innerText = formatTime12(t.Fajr);
-    document.getElementById('dhuhr').innerText = formatTime12(t.Dhuhr);
-    document.getElementById('asr').innerText = formatTime12(t.Asr);
-    document.getElementById('maghrib').innerText = formatTime12(t.Maghrib);
-    document.getElementById('isha').innerText = formatTime12(t.Isha);
-}
-
-// دالة الاحتياط لمصر
-async function fallbackToEgypt() {
-    const res = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5');
-    const data = await res.json();
-    displayPrayers(data.data.timings);
-    document.getElementById('location-name').innerText = "الموقع: مصر (افتراضي)";
-    updateDates(-1); // أوفست مصر
-}
+        }
 
         let preAdhanPlayed = false; // لمنع تكرار تنبيه الـ 5 دقائق
 
@@ -1090,6 +1136,24 @@ async function fallbackToEgypt() {
             adhanSound.pause();
             adhanSound.currentTime = 0;
             document.getElementById('stopAdhanBtn').style.display = 'none';
+        }
+        // استعادة قيمة التصحيح اليدوي من الذاكرة أو جعلها 0
+        let manualHijriOffset = parseInt(localStorage.getItem('manualHijriOffset')) || 0;
+        let currentAutoOffset = 0; // سنخزن فيه الأوفست التلقائي (مثل -1 لمصر)
+
+        // دالة تغيير التصحيح اليدوي
+        function changeManualOffset(val) {
+            manualHijriOffset += val;
+            // نحدد الحد الأقصى للتصحيح بـ 3 أيام زيادة أو نقص
+            if (manualHijriOffset > 3) manualHijriOffset = 3;
+            if (manualHijriOffset < -3) manualHijriOffset = -3;
+
+            localStorage.setItem('manualHijriOffset', manualHijriOffset);
+            document.getElementById('manualOffsetVal').innerText = (manualHijriOffset > 0 ? "+" : "") + manualHijriOffset;
+
+            // إعادة تحديث التاريخ فوراً
+            updateDates(currentAutoOffset);
+            if (navigator.vibrate) navigator.vibrate(30);
         }
 
         // ==========================================
@@ -1710,6 +1774,4 @@ async function fallbackToEgypt() {
     </script>
 </body>
 
-
 </html>
-
